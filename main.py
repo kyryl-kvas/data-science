@@ -36,8 +36,8 @@ print(df.describe())
 
 # Побудова попарних залежностей для числових змінних
 numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-sns.pairplot(df[numeric_cols])
-plt.show()
+# sns.pairplot(df[numeric_cols])
+# plt.show()
 
 # =========================
 # 2. Обробка пропущених значень
