@@ -1,212 +1,145 @@
 # Імпорт необхідних бібліотек
 import pandas as pd
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-from scipy.stats import skew
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.model_selection import train_test_split
+import statsmodels.api as sm
 
-# =========================
-# 0. Завантаження даних та відбір колонок
-# =========================
-# Завантажте дані з файлу "train.csv" з датасету House Prices – Advanced Regression Techniques
+# ======================== Крок 1. Завантаження даних та попередній аналіз ========================
+print("==== Крок 1: Завантаження даних та попередній аналіз ====")
 df = pd.read_csv('train.csv')
+print("Розмір датасету:", df.shape)
 
-# Відбір лише необхідних колонок (11 незалежних + цільова змінна)
-cols_to_use = ['SalePrice', 'LotArea', 'OverallQual', 'OverallCond', 'YearBuilt',
-               'TotalBsmtSF', 'GrLivArea', 'FullBath', 'BedroomAbvGr', 'KitchenAbvGr',
-               'GarageCars', 'GarageArea']
-df = df[cols_to_use]
-
-# =========================
-# 1. Попередній аналіз даних
-# =========================
-print("Перші рядки даних:")
-print(df.head())
-
-print("\nІнформація про дані:")
-print(df.info())
-
-print("\nСтатистичний опис числових змінних:")
-print(df.describe())
-
-# Побудова попарних залежностей для числових змінних
-numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-# sns.pairplot(df[numeric_cols])
-# plt.show()
-
-# =========================
-# 2. Обробка пропущених значень
-# =========================
-for col in numeric_cols:
-    df[col].fillna(df[col].mean(), inplace=True)
-
-# =========================
-# 3. Масштабування даних
-# =========================
-skewness = df[numeric_cols].apply(lambda x: skew(x.dropna()))
-normal_feats = skewness[abs(skewness) < 0.5].index.tolist()
-non_normal_feats = skewness[abs(skewness) >= 0.5].index.tolist()
-
-print("\nЗмінні з нормальним розподілом (буде StandardScaler):", normal_feats)
-print("Інші змінні (буде MinMaxScaler):", non_normal_feats)
-
-print("\nОпис числових даних до масштабування:")
-print(df[numeric_cols].describe())
-
-df_scaled = df.copy()
-scaler_std = StandardScaler()
-scaler_minmax = MinMaxScaler()
-df_scaled[normal_feats] = scaler_std.fit_transform(df[normal_feats])
-df_scaled[non_normal_feats] = scaler_minmax.fit_transform(df[non_normal_feats])
-
-print("\nОпис числових даних після масштабування:")
-print(df_scaled[numeric_cols].describe())
-
-# =========================
-# 4. Кодування категоріальних змінних
-# =========================
-# У цьому прикладі категоріальних змінних немає, тому просто копіюємо дані.
-df_encoded = df_scaled.copy()
-print("\nТипи даних після кодування (якщо були категоріальні):")
-print(df_encoded.dtypes)
-
-# =========================
-# 5. Кореляційний аналіз
-# =========================
-corr_matrix = df_encoded.corr()
-
-plt.figure(figsize=(10, 8))
-sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap='coolwarm')
-plt.title("Матриця кореляції")
-plt.show()
-
+# ======================== Крок 2. Вибір залежної змінної та 12 незалежних змінних ========================
+print("\n==== Крок 2: Вибір змінних ====")
 target = 'SalePrice'
-corr_target = corr_matrix[target].abs().sort_values(ascending=False)
-print("\nКореляція змінних з 'SalePrice':")
-print(corr_target)
+selected_features = [
+    "OverallQual",   # загальна якість
+    "GrLivArea",     # житлова площа над рівнем землі
+    "TotalBsmtSF",   # загальна площа підвалу
+    "FullBath",      # кількість повних ванних кімнат
+    "YearBuilt",     # рік побудови
+    "YearRemodAdd",  # рік реконструкції
+    "GarageCars",    # кількість машин у гаражі
+    "GarageArea",    # площа гаражу
+    "1stFlrSF",      # площа першого поверху
+    "TotRmsAbvGrd",  # загальна кількість кімнат над рівнем землі
+    "LotArea",       # площа ділянки
+    "BsmtFullBath"   # кількість повних ванних кімнат у підвалі
+]
+print("Обрані незалежні змінні:", selected_features)
 
-cols_to_drop = set()
-corr_thresh = 0.8
-cols = corr_matrix.columns.tolist()
+X = df[selected_features]
+y = df[target]
+
+# ======================== Крок 3. Додавання константи ========================
+print("\n==== Крок 3: Додавання константи ====")
+X = sm.add_constant(X)
+print("Стовпець константи додано. Переглянемо перші рядки:")
+print(X.head())
+
+# ======================== Крок 4. Розбиття вибірки на навчальну та тестову ========================
+print("\n==== Крок 4: Розбиття вибірки ====")
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+print("Навчальна вибірка:", X_train.shape)
+print("Тестова вибірка:", X_test.shape)
+
+# ======================== Крок 5. Побудова базової регресійної моделі (Модель 1) ========================
+print("\n==== Крок 5: Побудова базової моделі (Модель 1) ====")
+model1 = sm.OLS(y_train, X_train).fit()
+print(model1.summary())
+
+# Виведення рівняння регресії
+coefficients = model1.params
+eq_terms = ["{:.4f}*{}".format(coeff, var) for var, coeff in coefficients.items() if var != 'const']
+equation = "SalePrice = {:.4f} + ".format(coefficients['const']) + " + ".join(eq_terms)
+print("\nРівняння регресії (Модель 1):")
+print(equation)
+
+# Коефіцієнт множинної кореляції та F-статистика
+R = np.sqrt(model1.rsquared)
+print("\nКоефіцієнт множинної кореляції (R):", R)
+print("F-статистика:", model1.fvalue)
+
+# ======================== Крок 6. Перевірка значущості коефіцієнтів ========================
+print("\n==== Крок 6: Перевірка значущості коефіцієнтів (Модель 1) ====")
+print(model1.summary2().tables[1])
+
+# ======================== Крок 7. Прогноз та інтервали довіри для тестової вибірки (Модель 1) ========================
+print("\n==== Крок 7: Прогноз та довірчі інтервали для тестової вибірки (Модель 1) ====")
+pred_test = model1.get_prediction(X_test)
+pred_test_df = pred_test.summary_frame(alpha=0.05)
+n_test = X_test.shape[0]
+in_ci_test = ((y_test >= pred_test_df['obs_ci_lower']) & (y_test <= pred_test_df['obs_ci_upper'])).sum()
+out_ci_test = n_test - in_ci_test
+print("Кількість спостережень (тест):", n_test)
+print("Попадання у довірчий інтервал:", in_ci_test, "(", in_ci_test/n_test, ")")
+print("Непопадання:", out_ci_test, "(", out_ci_test/n_test, ")")
+
+# ======================== Крок 8. Прогноз та інтервали довіри для навчальної вибірки (Модель 1) ========================
+print("\n==== Крок 8: Прогноз та довірчі інтервали для навчальної вибірки (Модель 1) ====")
+pred_train = model1.get_prediction(X_train)
+pred_train_df = pred_train.summary_frame(alpha=0.05)
+n_train = X_train.shape[0]
+in_ci_train = ((y_train >= pred_train_df['obs_ci_lower']) & (y_train <= pred_train_df['obs_ci_upper'])).sum()
+out_ci_train = n_train - in_ci_train
+print("Кількість спостережень (навч):", n_train)
+print("Попадання у довірчий інтервал:", in_ci_train, "(", in_ci_train/n_train, ")")
+print("Непопадання:", out_ci_train, "(", out_ci_train/n_train, ")")
+
+# ======================== Крок 9. Аналіз мультиколінеарності ========================
+print("\n==== Крок 9: Аналіз мультиколінеарності ====")
+corr_matrix = X_train.drop('const', axis=1).corr()
+print("Кореляційна матриця незалежних змінних:")
+print(corr_matrix)
+
+# Визначення пар змінних із високою кореляцією (|кореляція| > 0.8)
+threshold = 0.8
+high_corr_pairs = []
+cols = corr_matrix.columns
 for i in range(len(cols)):
     for j in range(i+1, len(cols)):
-         col_i = cols[i]
-         col_j = cols[j]
-         if col_i == target or col_j == target:
-             continue
-         if abs(corr_matrix.loc[col_i, col_j]) > corr_thresh:
-             if corr_target[col_i] >= corr_target[col_j]:
-                 cols_to_drop.add(col_j)
-             else:
-                 cols_to_drop.add(col_i)
+        corr_value = corr_matrix.iloc[i, j]
+        if abs(corr_value) > threshold:
+            high_corr_pairs.append((cols[i], cols[j], corr_value))
+print("\nПари змінних з високою кореляцією (|кореляція| > {}):".format(threshold))
+for pair in high_corr_pairs:
+    print(pair)
 
-print("\nСтовпці, які буде видалено через високу кореляцію:", cols_to_drop)
-df_final = df_encoded.drop(columns=list(cols_to_drop))
-print("Розмір даних після видалення:", df_final.shape)
+# ======================== Крок 10. Побудова оптимізованої регресійної моделі (Модель 2) ========================
+print("\n==== Крок 10: Побудова оптимізованої моделі (Модель 2) ====")
+# Для спрощення та усунення мультиколінеарності обираємо підмножину змінних:
+selected_features_model2 = ["OverallQual", "GrLivArea", "TotalBsmtSF", "GarageCars", "YearBuilt"]
+X_model2 = df[selected_features_model2]
+X_model2 = sm.add_constant(X_model2)
+# Використовуємо ті самі індекси для розбиття
+X2_train = X_model2.loc[X_train.index]
+X2_test = X_model2.loc[X_test.index]
 
-# =========================
-# 6. Автоматизація препроцесингу та Feature Engineering
-# =========================
-# Оновлений кастомний трансформер з feature engineering, який створює нові колонки:
-# - TotalFinishedArea = TotalBsmtSF + GrLivArea
-# - GarageEfficiency = GarageArea / GarageCars (якщо GarageCars > 0, інакше 0)
-class FeatureEngineer(BaseEstimator, TransformerMixin):
-    def __init__(self):
-        pass
-    def fit(self, X, y=None):
-        return self
-    def transform(self, X):
-        X_transformed = X.copy()
-        # Створення нової колонки TotalFinishedArea
-        if 'TotalBsmtSF' in X_transformed.columns and 'GrLivArea' in X_transformed.columns:
-            X_transformed['TotalFinishedArea'] = X_transformed['TotalBsmtSF'] + X_transformed['GrLivArea']
-        # Створення нової колонки GarageEfficiency
-        if 'GarageArea' in X_transformed.columns and 'GarageCars' in X_transformed.columns:
-            X_transformed['GarageEfficiency'] = X_transformed.apply(
-                lambda row: row['GarageArea'] / row['GarageCars'] if row['GarageCars'] > 0 else 0,
-                axis=1)
-        return X_transformed
+model2 = sm.OLS(y_train, X2_train).fit()
+print(model2.summary())
 
-def preprocess_data(df):
-    """
-    Функція для автоматичного препроцесингу даних:
-      - Відбір лише обраних колонок
-      - Заповнення пропущених значень
-      - Feature engineering: створення нових колонок
-      - Масштабування числових даних (StandardScaler для нормально розподілених, MinMaxScaler для інших)
-    """
-    df_processed = df.copy()
-    
-    cols_to_use = ['SalePrice', 'LotArea', 'OverallQual', 'OverallCond', 'YearBuilt',
-                   'TotalBsmtSF', 'GrLivArea', 'FullBath', 'BedroomAbvGr', 'KitchenAbvGr',
-                   'GarageCars', 'GarageArea']
-    df_processed = df_processed[cols_to_use]
-    
-    numeric_cols = df_processed.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    for col in numeric_cols:
-        df_processed[col].fillna(df_processed[col].mean(), inplace=True)
-    
-    # Виконуємо feature engineering: додаємо нові колонки
-    fe = FeatureEngineer()
-    df_processed = fe.transform(df_processed)
-    
-    # Масштабування числових даних (окрім цільової 'SalePrice')
-    numeric_cols = df_processed.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    target = 'SalePrice'
-    if target in numeric_cols:
-        numeric_cols.remove(target)
-    
-    skewness = df_processed[numeric_cols].apply(lambda x: skew(x.dropna()))
-    normal_feats = skewness[abs(skewness) < 0.5].index.tolist()
-    non_normal_feats = skewness[abs(skewness) >= 0.5].index.tolist()
-    
-    scaler_std = StandardScaler()
-    scaler_minmax = MinMaxScaler()
-    df_processed[normal_feats] = scaler_std.fit_transform(df_processed[normal_feats])
-    df_processed[non_normal_feats] = scaler_minmax.fit_transform(df_processed[non_normal_feats])
-    
-    return df_processed
+# ======================== Крок 11. Перевірка значущості коефіцієнтів Моделі 2 ========================
+print("\n==== Крок 11: Перевірка значущості коефіцієнтів (Модель 2) ====")
+print(model2.summary2().tables[1])
 
-# Демонстрація роботи функції preprocess_data з feature engineering
-df_preprocessed = preprocess_data(pd.read_csv('train.csv'))
-print("\nПопередній перегляд оброблених даних з feature engineering:")
-print(df_preprocessed.head())
+# ======================== Крок 12. Прогноз та інтервали довіри для тестової вибірки (Модель 2) ========================
+print("\n==== Крок 12: Прогноз та довірчі інтервали для тестової вибірки (Модель 2) ====")
+pred_test2 = model2.get_prediction(X2_test)
+pred_test2_df = pred_test2.summary_frame(alpha=0.05)
+n_test2 = X2_test.shape[0]
+in_ci_test2 = ((y_test >= pred_test2_df['obs_ci_lower']) & (y_test <= pred_test2_df['obs_ci_upper'])).sum()
+out_ci_test2 = n_test2 - in_ci_test2
+print("Кількість спостережень (тест, модель 2):", n_test2)
+print("Попадання у довірчий інтервал:", in_ci_test2, "(", in_ci_test2/n_test2, ")")
+print("Непопадання:", out_ci_test2, "(", out_ci_test2/n_test2, ")")
 
-# =========================
-# Побудова Pipeline з feature engineering
-# =========================
-# Оновлюємо списки колонок для pipeline з врахуванням нових ознак
-numeric_features = ['LotArea', 'OverallQual', 'OverallCond', 'YearBuilt',
-                    'TotalBsmtSF', 'GrLivArea', 'FullBath', 'BedroomAbvGr', 'KitchenAbvGr',
-                    'GarageCars', 'GarageArea', 'TotalFinishedArea', 'GarageEfficiency']
-categorical_features = []  # У цьому прикладі категоріальних колонок немає
-
-numeric_pipeline = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='mean')),
-    ('scaler', StandardScaler())
-])
-
-categorical_pipeline = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('onehot', OneHotEncoder(handle_unknown='ignore'))
-])
-
-preprocessor = ColumnTransformer(transformers=[
-    ('num', numeric_pipeline, numeric_features),
-    ('cat', categorical_pipeline, categorical_features)
-])
-
-full_pipeline = Pipeline(steps=[
-    ('feature_engineering', FeatureEngineer()),
-    ('preprocessor', preprocessor)
-])
-
-df_raw = pd.read_csv('train.csv')
-df_raw = df_raw[cols_to_use]  # використання початкового набору колонок
-df_pipeline_processed = full_pipeline.fit_transform(df_raw)
-print("\nФорма даних після обробки через pipeline з feature engineering:", df_pipeline_processed.shape)
+# ======================== Крок 13. Прогноз та інтервали довіри для навчальної вибірки (Модель 2) ========================
+print("\n==== Крок 13: Прогноз та довірчі інтервали для навчальної вибірки (Модель 2) ====")
+pred_train2 = model2.get_prediction(X2_train)
+pred_train2_df = pred_train2.summary_frame(alpha=0.05)
+n_train2 = X2_train.shape[0]
+in_ci_train2 = ((y_train >= pred_train2_df['obs_ci_lower']) & (y_train <= pred_train2_df['obs_ci_upper'])).sum()
+out_ci_train2 = n_train2 - in_ci_train2
+print("Кількість спостережень (навч, модель 2):", n_train2)
+print("Попадання у довірчий інтервал:", in_ci_train2, "(", in_ci_train2/n_train2, ")")
+print("Непопадання:", out_ci_train2, "(", out_ci_train2/n_train2, ")")
