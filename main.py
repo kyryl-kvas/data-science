@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
-
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 pd.set_option('display.max_colwidth', None)
@@ -146,3 +146,42 @@ out_ci_train2 = n_train2 - in_ci_train2
 print("Кількість спостережень (навч, модель 2):", n_train2)
 print("Попадання у довірчий інтервал:", in_ci_train2, "(", in_ci_train2/n_train2, ")")
 print("Непопадання:", out_ci_train2, "(", out_ci_train2/n_train2, ")")
+
+y_train_pred1 = model1.predict(X_train)
+y_test_pred1 = model1.predict(X_test)
+
+# Розрахунок метрик для Моделі 1
+mse_train1 = mean_squared_error(y_train, y_train_pred1)
+mse_test1 = mean_squared_error(y_test, y_test_pred1)
+rmse_train1 = np.sqrt(mse_train1)
+rmse_test1 = np.sqrt(mse_test1)
+mae_train1 = mean_absolute_error(y_train, y_train_pred1)
+mae_test1 = mean_absolute_error(y_test, y_test_pred1)
+
+print("Модель 1:")
+print("Train MSE:", mse_train1)
+print("Test MSE:", mse_test1)
+print("Train RMSE:", rmse_train1)
+print("Test RMSE:", rmse_test1)
+print("Train MAE:", mae_train1)
+print("Test MAE:", mae_test1)
+
+# Прогнозування для Моделі 2
+y_train_pred2 = model2.predict(X2_train)
+y_test_pred2 = model2.predict(X2_test)
+
+# Розрахунок метрик для Моделі 2
+mse_train2 = mean_squared_error(y_train, y_train_pred2)
+mse_test2 = mean_squared_error(y_test, y_test_pred2)
+rmse_train2 = np.sqrt(mse_train2)
+rmse_test2 = np.sqrt(mse_test2)
+mae_train2 = mean_absolute_error(y_train, y_train_pred2)
+mae_test2 = mean_absolute_error(y_test, y_test_pred2)
+
+print("\nМодель 2:")
+print("Train MSE:", mse_train2)
+print("Test MSE:", mse_test2)
+print("Train RMSE:", rmse_train2)
+print("Test RMSE:", rmse_test2)
+print("Train MAE:", mae_train2)
+print("Test MAE:", mae_test2)
